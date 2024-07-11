@@ -1,0 +1,41 @@
+-- PD 2023 Week 3 --
+
+-- Filter and aggregate transaction data.
+SELECT REPLACE((REPLACE(online_or_in_person, '1', 'Online')),'2','In-Person') AS online_or_in_person_text,
+QUARTER(to_date(transaction_date, 'dd/MM/yyyy hh:mi:ss')) AS quarter,
+SUM(value) AS total_value
+FROM TIL_PLAYGROUND.PREPPIN_DATA_INPUTS.PD2023_WK01
+WHERE SPLIT_PART(transaction_code, '-',1)='DSB'
+GROUP BY QUARTER(to_date(transaction_date, 'dd/MM/yyyy hh:mi:ss')), REPLACE((REPLACE(online_or_in_person, '1', 'Online')),'2','In-Person');
+
+-- Pivot targets data and remove 'Q' from Quarter.
+SELECT online_or_in_person,
+target,
+replace(quarter, 'Q', '') as quarter
+FROM PD2023_WK03_TARGETS
+UNPIVOT(target FOR quarter IN ( Q1, Q2, Q3, Q4));
+
+-- Inner join these two datasets together.
+    -- Define transactions CTE:
+    WITH transaction_cte AS (
+    SELECT REPLACE((REPLACE(online_or_in_person, '1', 'Online')),'2','In-Person') AS online_or_in_person_text,
+    QUARTER(to_date(transaction_date, 'dd/MM/yyyy hh:mi:ss')) AS quarter,
+    SUM(value) AS total_value
+    FROM TIL_PLAYGROUND.PREPPIN_DATA_INPUTS.PD2023_WK01
+    WHERE SPLIT_PART(transaction_code, '-',1)='DSB'
+    GROUP BY QUARTER(to_date(transaction_date, 'dd/MM/yyyy hh:mi:ss')), REPLACE((REPLACE(online_or_in_person, '1', 'Online')),'2','In-Person')
+    )
+    -- Query the target data, prepped as above:
+    SELECT online_or_in_person,
+    target,
+    replace(TA.quarter, 'Q', ''):: int as quarter,
+    TR.total_value,
+
+    -- Calculate difference to target:
+    TR.total_value - target AS difference_to_target
+    
+    FROM PD2023_WK03_TARGETS as TA
+    UNPIVOT(target FOR quarter IN ( Q1, Q2, Q3, Q4))
+
+    -- Inner join the CTE to the target data:
+    INNER JOIN transaction_cte AS TR on TR.ONLINE_OR_IN_PERSON_text = TA.ONLINE_OR_IN_PERSON AND (replace(TA.quarter, 'Q', ''):: int) = TR.quarter;
