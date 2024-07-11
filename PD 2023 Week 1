@@ -1,0 +1,45 @@
+-- PD 2023 Week 1 --
+
+-- Challenge requires preparing the data, then creating three outputs. We will create a CTE containing the prepped data, which we can  then use to create each output. 
+-- Define CTE:
+WITH transaction_query AS (
+
+SELECT value, customer_code, transaction_date,
+
+-- Extract the first part of the transaction code:
+SPLIT_PART(transaction_code, '-', 1) AS bank,
+
+-- Rename values in Online or In-Person:
+CASE
+    WHEN online_or_in_person=1 then 'Online'
+    ELSE 'In-Person'
+    END
+    AS online_or_in_person,
+    
+-- Change data type of transaction date to a date, then extract the weekday.
+DAYNAME(TO_DATE(transaction_date, 'dd/MM/yyyy HH:mi:SS')) AS day_of_the_week 
+
+FROM PD2023_WK01)
+
+-- OUTPUT 1) Total Values of Transactions by each bank:
+     
+-- SELECT bank,
+-- SUM(value) as total_value
+-- FROM transaction_query
+-- GROUP BY bank;
+
+
+-- OUTPUT 2) Total Values by Bank, Day of the Week and Type of Transaction (Online or In-Person):
+
+-- SELECT bank, day_of_the_week, online_or_in_person,
+-- SUM(value) as total_value
+-- FROM transaction_query
+-- GROUP BY bank, day_of_the_week, online_or_in_person;
+
+
+-- OUTPUT 3) Total Values by Bank and Customer Code:
+
+-- SELECT bank, customer_code,
+-- SUM(value) as total_value
+-- FROM transaction_query
+-- GROUP BY bank, customer_code;
