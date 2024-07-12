@@ -1,0 +1,65 @@
+-- PD 2023 Week 4 --
+
+    -- create a CTE with the pivoted data so that we can apply a WHERE clause on the field row_number (row_number is a window operation, which is       why we need to create a CTE in order to query it):
+    WITH PIVOTED_CTE AS (
+        -- create a CTE that contains only the fields required for the pivot:
+        WITH PRE_PIVOT_CTE AS (
+            -- create a CTE from the unioned tables so that it is easier to reference going forwards:
+            WITH UNION_CTE AS (
+            SELECT *, 'PD2023_WK04_JANUARY' AS table_name FROM PD2023_WK04_JANUARY
+            UNION ALL
+            SELECT *, 'PD2023_WK04_FEBRUARY' AS table_name FROM PD2023_WK04_FEBRUARY
+            UNION ALL
+            SELECT *, 'PD2023_WK04_MARCH' AS table_name FROM PD2023_WK04_MARCH
+            UNION ALL
+            SELECT *, 'PD2023_WK04_APRIL' AS table_name  FROM PD2023_WK04_APRIL
+            UNION ALL
+            SELECT *, 'PD2023_WK04_MAY' AS table_name FROM PD2023_WK04_MAY
+            UNION ALL
+            SELECT *, 'PD2023_WK04_JUNE' AS table_name FROM PD2023_WK04_JUNE
+            UNION ALL
+            SELECT *, 'PD2023_WK04_JULY' AS table_name FROM PD2023_WK04_JULY
+            UNION ALL
+            SELECT *, 'PD2023_WK04_AUGUST' AS table_name FROM PD2023_WK04_AUGUST
+            UNION ALL
+            SELECT *, 'PD2023_WK04_SEPTEMBER' AS table_name FROM PD2023_WK04_SEPTEMBER
+            UNION ALL
+            SELECT *, 'PD2023_WK04_OCTOBER' AS table_name FROM PD2023_WK04_OCTOBER
+            UNION ALL
+            SELECT *, 'PD2023_WK04_NOVEMBER' AS table_name FROM PD2023_WK04_NOVEMBER
+            UNION ALL
+            SELECT *, 'PD2023_WK04_DECEMBER' AS table_name FROM PD2023_WK04_DECEMBER
+            )
+        SELECT id,
+        -- create joining_date field:
+        TO_DATE(
+            (CASE 
+            WHEN length(joining_day :: STRING)=1 THEN '0'||(joining_day :: STRING)
+            ELSE (joining_day :: STRING)
+            END)||'/'||(SPLIT_PART(DATE(SPLIT_PART(table_name, '_', 3), 'MMMM'), '-', 2))||'/2023', 'dd/Mi/yyyy')
+            AS joining_date,
+        value,
+        demographic
+        FROM UNION_CTE)
+    
+    SELECT id,
+    joining_date,
+    ethnicity,
+    account_type,
+    date_of_birth:: date AS date_of_birth,
+    -- create a field which asigns row numbers based on joining date, and resets every id.
+    ROW_NUMBER() OVER(PARTITION BY id ORDER BY joining_date ASC) AS row_number
+    FROM PRE_PIVOT_CTE
+    PIVOT( MAX(value) FOR demographic IN ('Ethnicity', 'Account Type', 'Date of Birth')) AS pivot_table
+    (id,
+    joining_date,
+    ethnicity,
+    account_type,
+    date_of_birth)
+    )
+
+SELECT * 
+FROM PIVOTED_CTE
+-- remove duplicate ids, only keeping the row with the earliest joining date:
+WHERE ROW_NUMBER=1
+;
