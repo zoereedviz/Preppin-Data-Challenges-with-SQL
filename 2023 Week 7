@@ -1,0 +1,29 @@
+-- PD 2023 Wk 7 --
+WITH cte_acc_info AS (
+    SELECT account_number, account_type, balance_date, balance, value AS account_holder_id
+    FROM PD2023_WK07_ACCOUNT_INFORMATION, LATERAL SPLIT_TO_TABLE(account_holder_id, ', ')
+    WHERE account_holder_id IS NOT NULL)
+    ,
+cte_acc_holder AS (
+    SELECT account_holder_id, name, date_of_birth, first_line_of_address,
+    '0'||contact_number::varchar(20) as phone
+    FROM PD2023_WK07_ACCOUNT_HOLDERS)
+
+SELECT TD.transaction_id,
+TP.account_to,
+TD.transaction_date,
+TD.value,
+cte_acc_info.account_number,
+cte_acc_info.account_type,
+cte_acc_info.balance_date,
+cte_acc_info.balance,
+cte_acc_holder.name,
+cte_acc_holder.date_of_birth,
+cte_acc_holder.phone AS contact_number,
+cte_acc_holder.first_line_of_address
+FROM PD2023_WK07_TRANSACTION_PATH AS TP
+INNER JOIN PD2023_WK07_TRANSACTION_DETAIL AS TD ON TP.transaction_id=TD.transaction_id
+INNER JOIN cte_acc_info ON TP.account_from=cte_acc_info.account_number
+INNER JOIN cte_acc_holder ON cte_acc_info.account_holder_id=cte_acc_holder.account_holder_id
+WHERE value>1000 AND cancelled_='N' AND account_type!= 'Platinum'
+;
