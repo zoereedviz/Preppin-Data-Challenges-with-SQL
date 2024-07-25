@@ -1,0 +1,52 @@
+-- PD 2023 Wk 6 --
+
+WITH cte_online AS (
+    SELECT customer_id,
+    online_values,
+    SPLIT_PART(area, '___', 2) AS area
+    FROM PD2023_WK06_DSB_CUSTOMER_SURVEY
+    UNPIVOT( online_values FOR area IN (
+    ONLINE_INTERFACE___EASE_OF_USE,
+    ONLINE_INTERFACE___EASE_OF_ACCESS,
+    ONLINE_INTERFACE___NAVIGATION,
+    ONLINE_INTERFACE___LIKELIHOOD_TO_RECOMMEND,
+    ONLINE_INTERFACE___OVERALL_RATING)))
+    ,
+cte_mobile AS (
+    SELECT customer_id,
+    mobile_values,
+    SPLIT_PART(area, '___', 2) AS area
+    FROM PD2023_WK06_DSB_CUSTOMER_SURVEY
+    UNPIVOT( mobile_values FOR area IN (
+    MOBILE_APP___EASE_OF_USE,
+    MOBILE_APP___EASE_OF_ACCESS,
+    MOBILE_APP___NAVIGATION,
+    MOBILE_APP___LIKELIHOOD_TO_RECOMMEND,
+    MOBILE_APP___OVERALL_RATING)))
+    ,
+cte_prepped_table AS (
+    SELECT cte_online.*,
+    cte_mobile.mobile_values
+    FROM cte_online
+    INNER JOIN cte_mobile ON cte_online.customer_id=cte_mobile.customer_id AND cte_online.area=cte_mobile.area
+    WHERE cte_online.area != 'OVERALL_RATING')
+    ,
+cte_averages AS (
+    SELECT customer_id,
+    AVG(online_values) AS avg_rating_online,
+    AVG(mobile_values) AS avg_rating_mobile,
+    AVG(mobile_values)-AVG(online_values) AS difference_in_avg_rating,
+    CASE WHEN (AVG(mobile_values)-AVG(online_values))>=2 THEN 'mobile_app_superfan'
+        WHEN (AVG(mobile_values)-AVG(online_values)) >=1 THEN 'mobile_app_fan'
+        WHEN (AVG(mobile_values)-AVG(online_values)) >-1 THEN 'neutral'
+        WHEN (AVG(mobile_values)-AVG(online_values)) >-2 THEN 'online_interface_fan'
+        WHEN (AVG(mobile_values)-AVG(online_values)) <= -2 THEN 'online_interface_superfan'
+        END AS fan_category,
+    (SELECT COUNT(DISTINCT customer_id) FROM cte_prepped_table) AS total_customer_count,
+    FROM cte_prepped_table
+    GROUP BY customer_id)
+SELECT fan_category,
+ROUND((((COUNT(DISTINCT customer_id) )/(MIN(total_customer_count) )*100)),1) AS percent_of_total
+FROM cte_averages
+GROUP BY fan_category
+;
