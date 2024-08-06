@@ -1,0 +1,115 @@
+-- PD 2023 Wk 8 --
+
+WITH cte_post_rank AS (
+WITH cte_pre_rank AS (
+WITH cte AS (
+    SELECT *, 
+    1 AS file_date
+    FROM PD2023_WK08_01
+UNION
+    SELECT *, 
+    2 AS file_date
+    FROM PD2023_WK08_02
+UNION
+    SELECT *, 
+    3 AS file_date
+    FROM PD2023_WK08_03
+UNION
+    SELECT *, 
+    4 AS file_date
+    FROM PD2023_WK08_04
+UNION
+    SELECT *, 
+    5 AS file_date
+    FROM PD2023_WK08_05
+UNION
+    SELECT *, 
+    6 AS file_date
+    FROM PD2023_WK08_06
+UNION
+    SELECT *, 
+    7 AS file_date
+    FROM PD2023_WK08_07
+UNION
+    SELECT *, 
+    8 AS file_date
+    FROM PD2023_WK08_08
+UNION
+    SELECT *, 
+    9 AS file_date
+    FROM PD2023_WK08_09
+UNION
+    SELECT *, 
+    10 AS file_date
+    FROM PD2023_WK08_10
+UNION
+    SELECT *, 
+    11 AS file_date
+    FROM PD2023_WK08_11
+UNION
+    SELECT *, 
+    12 AS file_date
+    FROM PD2023_WK08_12)
+SELECT id,
+first_name,
+last_name,
+ticker,
+sector,
+market,
+stock_name,
+market_cap,
+REPLACE(market_cap, '$', '') AS market_capitalisation_no_dollar,
+CASE WHEN CONTAINS(market_cap, 'M') THEN 1000000
+    WHEN contains(market_cap, 'B') THEN 1000000000
+    ELSE 1
+    END
+AS multiplier,
+purchase_price,
+file_date,
+REPLACE(REPLACE(REPLACE(market_cap, '$', ''), 'M', ''), 'B', '') AS market_cap_numeric,
+ROUND(((REPLACE(REPLACE(REPLACE(market_cap, '$', ''), 'M', ''), 'B', ''))*(CASE WHEN CONTAINS(market_cap, 'M') THEN 1000000
+    WHEN contains(market_cap, 'B') THEN 1000000000
+    ELSE 1
+    END)),2)
+AS market_capitalisation,
+CASE WHEN REPLACE(purchase_price, '$', '') < 25000 THEN 'Low'
+     WHEN REPLACE(purchase_price, '$', '') < 50000 THEN 'Medium'
+     WHEN REPLACE(purchase_price, '$', '') < 75000 THEN 'High'
+     WHEN REPLACE(purchase_price, '$', '') < 100000 THEN 'Very High'
+     END AS purchase_price_categorisation,
+
+CASE WHEN 
+        ROUND(((REPLACE(REPLACE(REPLACE(market_cap, '$', ''), 'M', ''), 'B', ''))*(CASE WHEN CONTAINS(market_cap, 'M') THEN 1000000
+        WHEN contains(market_cap, 'B') THEN 1000000000
+        ELSE 1
+        END)),2) < 100000000 THEN 'Small'
+     WHEN 
+        ROUND(((REPLACE(REPLACE(REPLACE(market_cap, '$', ''), 'M', ''), 'B', ''))*(CASE WHEN CONTAINS(market_cap, 'M') THEN 1000000
+        WHEN contains(market_cap, 'B') THEN 1000000000
+        ELSE 1
+        END)),2) < 1000000000 THEN 'Medium'
+     WHEN 
+        ROUND(((REPLACE(REPLACE(REPLACE(market_cap, '$', ''), 'M', ''), 'B', ''))*(CASE WHEN CONTAINS(market_cap, 'M') THEN 1000000
+        WHEN contains(market_cap, 'B') THEN 1000000000
+        ELSE 1
+        END)),2) < 100000000000 THEN 'Large'
+     ELSE 'Huge'
+     END AS market_cap_categorisation
+FROM cte
+WHERE market_cap != 'n/a')
+SELECT *,
+RANK() OVER( PARTITION BY file_date, market_cap_categorisation, purchase_price_categorisation ORDER BY REPLACE(purchase_price, '$', '') DESC) AS rank
+FROM cte_pre_rank)
+SELECT market_cap_categorisation,
+purchase_price_categorisation,
+file_date,
+ticker,
+sector,
+market,
+stock_name,
+market_capitalisation,
+purchase_price,
+rank
+FROM cte_post_rank
+WHERE rank<6
+;
