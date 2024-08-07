@@ -1,6 +1,5 @@
 -- PD 2023 Wk 8 --
 
-WITH cte_post_rank AS (
 WITH cte_pre_rank AS (
 WITH cte AS (
     SELECT *, 
@@ -99,17 +98,5 @@ FROM cte
 WHERE market_cap != 'n/a')
 SELECT *,
 RANK() OVER( PARTITION BY file_date, market_cap_categorisation, purchase_price_categorisation ORDER BY REPLACE(purchase_price, '$', '') DESC) AS rank
-FROM cte_pre_rank)
-SELECT market_cap_categorisation,
-purchase_price_categorisation,
-file_date,
-ticker,
-sector,
-market,
-stock_name,
-market_capitalisation,
-purchase_price,
-rank
-FROM cte_post_rank
-WHERE rank<6
-;
+FROM cte_pre_rank
+QUALIFY RANK() OVER( PARTITION BY file_date, market_cap_categorisation, purchase_price_categorisation ORDER BY REPLACE(purchase_price, '$', '') DESC)<6;
